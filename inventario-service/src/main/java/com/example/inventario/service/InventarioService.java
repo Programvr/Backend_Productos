@@ -21,6 +21,10 @@ public class InventarioService {
     private final InventarioRepository inventarioRepository;
     private final ProductoClient productoClient;
     private final InventarioEventPublisher eventPublisher;
+    
+    public void setProductosApiKey(String productosApiKey) {
+    this.productosApiKey = productosApiKey;
+    }
 
     @Value("${productos.api.key}")
     private String productosApiKey;
@@ -28,11 +32,11 @@ public class InventarioService {
     @Transactional(readOnly = true)
     public JsonApiResponse<InventarioResponse> consultarInventario(Long productoId) {
         try {
-            var productoResponse = productoClient.obtenerProductoPorId(
-                productoId,
-                productosApiKey
-            );
+            // Primero consulta el microservicio de productos
+            var productoApiResponse = productoClient.obtenerProductoPorId(productoId, productosApiKey);
+            var productoResponse = productoApiResponse.getData().getAttributes();
 
+            // Luego busca el inventario local
             Inventario inventario = inventarioRepository.findByProductoId(productoId)
                     .orElseThrow(() -> new ResourceNotFoundException("Inventario no encontrado para el producto ID: " + productoId));
 
@@ -45,6 +49,11 @@ public class InventarioService {
     @Transactional
     public JsonApiResponse<InventarioResponse> actualizarInventario(InventarioDTO inventarioDTO) {
         try {
+            // Primero consulta el microservicio de productos
+            var productoApiResponse = productoClient.obtenerProductoPorId(inventarioDTO.getProductoId(), productosApiKey);
+            var productoResponse = productoApiResponse.getData().getAttributes();
+
+            // Luego busca el inventario local
             Inventario inventario = inventarioRepository.findByProductoId(inventarioDTO.getProductoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Inventario no encontrado para el producto ID: " + inventarioDTO.getProductoId()));
 
@@ -60,12 +69,6 @@ public class InventarioService {
                     inventarioActualizado.getCantidadDisponible()
             );
 
-            // Obtener nombre del producto actualizado
-            var productoResponse = productoClient.obtenerProductoPorId(
-                inventarioDTO.getProductoId(),
-                productosApiKey
-            );
-
             return mapToJsonApiResponse(inventarioActualizado, productoResponse.getNombre());
         } catch (FeignException ex) {
             throw new IllegalArgumentException("Error al comunicarse con el microservicio de productos: " + ex.getMessage());
@@ -75,8 +78,11 @@ public class InventarioService {
     @Transactional
     public JsonApiResponse<InventarioResponse> crearInventario(Long productoId, Integer cantidadInicial) {
         try {
-            var productoResponse = productoClient.obtenerProductoPorId(productoId, productosApiKey);
+            // Primero consulta el microservicio de productos
+            var productoApiResponse = productoClient.obtenerProductoPorId(productoId, productosApiKey);
+            var productoResponse = productoApiResponse.getData().getAttributes();
 
+            // Luego verifica si ya existe el inventario
             if (inventarioRepository.findByProductoId(productoId).isPresent()) {
                 throw new IllegalArgumentException("El inventario para este producto ya existe.");
             }
