@@ -1,13 +1,13 @@
-# Usa una imagen base de Java
-FROM eclipse-temurin:17-jre-alpine
+# Usa una imagen de Java 21
+FROM eclipse-temurin:21-jre-alpine
 
 # Crea un directorio para la app
 WORKDIR /app
 
-# Copia el jar generado al contenedor
-COPY target/inventario-service-*.jar app.jar
+# Copia el jar generado por Maven
+COPY target/inventario-service-0.0.1-SNAPSHOT.jar app.jar
 
-# Expone el puerto (ajusta si usas otro)
+# Expone el puerto de la app
 EXPOSE 8081
 
 # Comando para ejecutar la app
