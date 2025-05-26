@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   sqlserver:
     build:
@@ -25,6 +27,8 @@ services:
         /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong!Passw0rd -Q 'CREATE DATABASE productos_db' &&
         wait
       "
+    networks:
+      - backend_network
 
   inventario-service:
     build: ./inventario-service
@@ -35,10 +39,15 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=inventario_db;encrypt=false
       - SPRING_DATASOURCE_USERNAME=sa
       - SPRING_DATASOURCE_PASSWORD=YourStrong!Passw0rd
+      - PRODUCTOS_API_KEY=2f8e1b9c-4a7d-4c2b-9e3a-123456789abc
     depends_on:
       sqlserver:
         condition: service_healthy
+      productos-service:
+        condition: service_started
     restart: unless-stopped
+    networks:
+      - backend_network
 
   productos-service:
     build: ./productos-service
@@ -49,10 +58,17 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=productos_db;encrypt=false
       - SPRING_DATASOURCE_USERNAME=sa
       - SPRING_DATASOURCE_PASSWORD=YourStrong!Passw0rd
+      - API_KEY=2f8e1b9c-4a7d-4c2b-9e3a-123456789abc
     depends_on:
       sqlserver:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - backend_network
 
 volumes:
   sqlserver_data:
+
+networks:
+  backend_network:
+    driver: bridge

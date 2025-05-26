@@ -10,7 +10,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Autowired;
 
-
 import java.io.IOException;
 
 @Component
@@ -25,6 +24,20 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        // Agregar headers CORS en todas las respuestas
+        String origin = request.getHeader("Origin");
+        if (origin != null) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+            response.setHeader("Access-Control-Allow-Credentials", "true");
+        }
+        response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", request.getHeader("Access-Control-Request-Headers"));
+
+        // Permitir preflight CORS sin autenticación
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
         // Si está en perfil test, no valida la API key
         if (java.util.Arrays.asList(env.getActiveProfiles()).contains("test")) {
             filterChain.doFilter(request, response);
@@ -42,7 +55,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-    // No filtrar Swagger UI ni la documentación OpenAPI
+        // No filtrar Swagger UI ni la documentación OpenAPI
         return path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/swagger-resources");
-}
+    }
 }
